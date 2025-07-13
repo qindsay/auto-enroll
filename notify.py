@@ -55,12 +55,16 @@ class checker:
         self.urls_ids = {}
         
         #both dictionaries use class ids as keys
-        self.previous_seats = {}
+        self.status_seats = {}
         self.class_names = {}
         
-        self.CHECK_INTERVAL = check_interval #seconds
         self.lock = threading.Lock()
         self.is_running = True
+        
+        self.CHECK_INTERVAL = check_interval #seconds
+        self.OPEN = 0
+        self.WAITLIST = 1
+        self.CLOSED = 2
     
     def add_class(self, url):
         r = rq.get(url)
@@ -84,29 +88,28 @@ class checker:
             class_id = self.urls_ids[url]
             del self.urls_ids[url]
             del self.class_names[class_id]
-            del self.previous_seats[class_id]
+            del self.seats_status[class_id]
             
             print("Removed " + self.get_info_string(url))
         else:
             print("URL not found:", url)
         
-    
     def extract_count_status(self, row, waitlist):
         if "Open" in row:
             of_index = row.index("of")
             spots = int(row[6:of_index-1])
-            return spots, 0
+            return spots, self.OPEN
         elif "Waitlist" in row:
             print("row", row)
             print("waitlist", waitlist)
             of_index = waitlist.index("of")
             spots = int(waitlist[:of_index-1])
-            return spots, 1
+            return spots, self.WAITLIST
         else:
             open_index = row.index("(")
             close_index = row.index(")")
             spots = int(row[open_index+1:close_index])
-            return spots, 2
+            return spots, self.CLOSED
     
     def get_info_string(self, url):
         id = self.urls_ids[url]
@@ -124,12 +127,14 @@ class checker:
         waitlist = candidates[1]
         
         seats, status = self.extract_count_status(row.string, waitlist.string)
+                    
+        if class_id in self.status_seats:
+            if status < self.seats_status[class_id][1]: #status changed to be open or waitlist
+                self.notif.send_email(class_id, url)
+            elif seats > self.seats_status[class_id][0]: #seats increased
+                self.notif.send_email(class_id, url)
         
-        if class_id not in self.previous_seats:
-            self.previous_seats[class_id] = [seats, status]
-        else:
-            if seats < self.previous_seats[class_id][0]:
-                self.notif.send_email(class_id, url) 
+        self.seats_status[class_id] = [seats, status]
     
     def monitor(self):
         while self.is_running:
