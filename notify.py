@@ -55,7 +55,7 @@ class checker:
         self.urls_ids = {}
         
         #both dictionaries use class ids as keys
-        self.status_seats = {}
+        self.seats_status = {}
         self.class_names = {}
         
         self.lock = threading.Lock()
@@ -146,6 +146,7 @@ class checker:
     
     def command_line(self):
         print("Type commands: add <url>, remove <url>, list, quit")
+        print("INFO: url should be the Schedule of Classes link of a course.")
         while True:
             cmd = input("> ").strip()
             if cmd.startswith("add "):
