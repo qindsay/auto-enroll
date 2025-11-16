@@ -128,7 +128,7 @@ class checker:
         
         seats, status = self.extract_count_status(row.string, waitlist.string)
                     
-        if class_id in self.status_seats:
+        if class_id in self.seats_status:
             if status < self.seats_status[class_id][1]: #status changed to be open or waitlist
                 self.notif.send_email(class_id, url)
             elif seats > self.seats_status[class_id][0]: #seats increased
